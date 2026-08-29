@@ -56,3 +56,6 @@ public/src/js/plugin
 .hidden
 
 /__pycache__
+
+.env
+*.pyc
