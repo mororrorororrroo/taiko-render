@@ -49,22 +49,49 @@ app = Flask(__name__)
 client = MongoClient(host=os.environ.get("TAIKO_WEB_MONGO_HOST") or take_config('MONGO', required=True)['host'])
 basedir = take_config('BASEDIR') or '/'
 
-app.secret_key = take_config('SECRET_KEY') or 'change-me'
-app.config['SESSION_TYPE'] = 'redis'
-redis_config = take_config('REDIS', required=True)
-redis_config['CACHE_REDIS_HOST'] = os.environ.get("TAIKO_WEB_REDIS_HOST") or redis_config['CACHE_REDIS_HOST']
-app.config['SESSION_REDIS'] = Redis(
-    host=redis_config['CACHE_REDIS_HOST'],
-    port=redis_config['CACHE_REDIS_PORT'],
-    password=redis_config['CACHE_REDIS_PASSWORD'],
-    db=redis_config['CACHE_REDIS_DB']
+app.secret_key = (
+    os.environ.get("SECRET_KEY")
+    or take_config('SECRET_KEY')
+    or 'change-me'
 )
-app.cache = Cache(app, config=redis_config)
+app.config['SESSION_TYPE'] = 'redis'
+
+# Render Key Value and most hosted Redis providers expose one REDIS_URL.
+# Keep the original host-based settings as a local-development fallback.
+redis_config = take_config('REDIS', required=True).copy()
+redis_url = os.environ.get("REDIS_URL")
+
+if redis_url:
+    redis_client = Redis.from_url(redis_url)
+    app.config['SESSION_REDIS'] = redis_client
+    cache_config = {
+        'CACHE_TYPE': 'RedisCache',
+        'CACHE_REDIS_URL': redis_url,
+    }
+else:
+    redis_config['CACHE_REDIS_HOST'] = (
+        os.environ.get("TAIKO_WEB_REDIS_HOST")
+        or redis_config['CACHE_REDIS_HOST']
+    )
+    redis_client = Redis(
+        host=redis_config['CACHE_REDIS_HOST'],
+        port=redis_config['CACHE_REDIS_PORT'],
+        password=redis_config['CACHE_REDIS_PASSWORD'],
+        db=redis_config['CACHE_REDIS_DB']
+    )
+    app.config['SESSION_REDIS'] = redis_client
+    cache_config = redis_config
+
+app.cache = Cache(app, config=cache_config)
 sess = Session()
 sess.init_app(app)
 #csrf = CSRFProtect(app)
 
-db = client[take_config('MONGO', required=True)['database']]
+mongo_database = (
+    os.environ.get("TAIKO_WEB_MONGO_DATABASE")
+    or take_config('MONGO', required=True)['database']
+)
+db = client[mongo_database]
 db.users.create_index('username', unique=True)
 db.songs.create_index('id', unique=True)
 db.scores.create_index('username')
