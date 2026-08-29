@@ -22,7 +22,7 @@ COPY . .
 RUN test -f /app/config.py || cp /app/config.example.py /app/config.py
 
 COPY render-nginx.conf.template /etc/nginx/templates/render-nginx.conf.template
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY supervisord.conf /etc/supervisord.conf
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
