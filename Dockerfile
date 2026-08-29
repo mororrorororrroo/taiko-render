@@ -4,11 +4,12 @@ WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        git \
+        build-essential \
         ffmpeg \
+        gettext-base \
+        git \
         nginx \
         supervisor \
-        gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -20,14 +21,9 @@ COPY . .
 
 RUN test -f /app/config.py || cp /app/config.example.py /app/config.py
 
-COPY render-nginx.conf.template \
-    /etc/nginx/templates/render-nginx.conf.template
-
-COPY supervisord.conf \
-    /etc/supervisor/conf.d/supervisord.conf
-
-COPY docker-entrypoint.sh \
-    /usr/local/bin/docker-entrypoint.sh
+COPY render-nginx.conf.template /etc/nginx/templates/render-nginx.conf.template
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
     && rm -f /etc/nginx/sites-enabled/default \
